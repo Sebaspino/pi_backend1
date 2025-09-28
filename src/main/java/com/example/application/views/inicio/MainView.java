@@ -142,3 +142,96 @@ public class MainView extends VerticalLayout {
                 Notification.show("Selecciona una fecha y hora.", 3000, Notification.Position.MIDDLE);
                 return;
             }
+            String fechaYHora = dateTimePicker.getValue().toString();
+            SistemaSerenityLab.getHorariosDisponibles().add(new Horario(usuarioActual.getNombreUsuario(), fechaYHora));
+            dateTimePicker.clear();
+            Notification.show("Horario añadido.", 2000, Notification.Position.MIDDLE);
+            actualizarVista();
+        });
+
+        Grid<Cita> gridCitas = new Grid<>(Cita.class);
+        gridCitas.setItems(SistemaSerenityLab.getCitasAgendadas());
+        gridCitas.setColumns("nombreEstudiante", "fechaYHora");
+        gridCitas.getColumnByKey("nombreEstudiante").setHeader("Estudiante");
+        gridCitas.getColumnByKey("fechaYHora").setHeader("Fecha y Hora");
+gridCitas.getStyle().setHeight("100px");
+
+        H3 resumen = new H3("Citas agendadas: " + SistemaSerenityLab.getCitasAgendadas().size());
+        resumen.getStyle().set("color", "#d32f2f");
+
+        Button logoutButton = new Button("Cerrar Sesión", e -> {
+            usuarioActual = null;
+            Notification.show("Sesión cerrada.", 2000, Notification.Position.MIDDLE);
+            actualizarVista();
+        });
+
+        layoutPsicologo.setSpacing(true);
+        layoutPsicologo.setPadding(true);
+        layoutPsicologo.add(dateTimePicker, anadirHorarioButton, new H3("Citas Agendadas"), gridCitas, resumen, logoutButton); // ✅ Punto y coma añadido y botón de logout agregado
+    }
+
+    private void mostrarVistaEstudiante() {
+        layoutEstudiante.removeAll();
+        add(new H3("Menú del Estudiante: " + (usuarioActual != null ? usuarioActual.getNombreUsuario() : "")),
+                layoutEstudiante);
+
+        Grid<Horario> gridHorarios = new Grid<>(Horario.class);
+        gridHorarios.setItems(SistemaSerenityLab.getHorariosDisponibles());
+        gridHorarios.setColumns("fechaYHora", "nombrePsicologo");
+        gridHorarios.getColumnByKey("fechaYHora").setHeader("Horario");
+        gridHorarios.getColumnByKey("nombrePsicologo").setHeader("Psicólogo");
+
+        gridHorarios.asSingleSelect().addValueChangeListener(event -> {
+            Horario horarioSeleccionado = event.getValue();
+            if (horarioSeleccionado != null) {
+                SistemaSerenityLab.getHorariosDisponibles().remove(horarioSeleccionado);
+                SistemaSerenityLab.getCitasAgendadas().add(new Cita(usuarioActual.getNombreUsuario(),
+                        horarioSeleccionado.getNombrePsicologo(), horarioSeleccionado.getFechaYHora()));
+                Notification.show("Cita agendada con éxito.", 2000, Notification.Position.MIDDLE);
+                actualizarVista();
+            }
+        });
+
+        List<Cita> misCitas = new ArrayList<>();
+        for (Cita cita : SistemaSerenityLab.getCitasAgendadas()) {
+            if (usuarioActual != null
+                    && cita.getNombreEstudiante().equalsIgnoreCase(usuarioActual.getNombreUsuario())) {
+                misCitas.add(cita);
+            }
+        }
+        Grid<Cita> gridMisCitas = new Grid<>(Cita.class);
+        gridMisCitas.setItems(misCitas);
+        gridMisCitas.setColumns("fechaYHora", "nombrePsicologo");
+        gridMisCitas.getColumnByKey("fechaYHora").setHeader("Fecha y Hora");
+        gridMisCitas.getColumnByKey("nombrePsicologo").setHeader("Psicólogo");
+
+        H3 resumen = new H3("Tus citas: " + misCitas.size() + " | Horarios disponibles: "
+                + SistemaSerenityLab.getHorariosDisponibles().size());
+        resumen.getStyle().set("color", "#1976d2");
+
+        gridMisCitas.asSingleSelect().addValueChangeListener(event -> {
+            Cita citaSeleccionada = event.getValue();
+            if (citaSeleccionada != null) {
+                SistemaSerenityLab.getCitasAgendadas().remove(citaSeleccionada);
+                SistemaSerenityLab.getHorariosDisponibles()
+                        .add(new Horario(citaSeleccionada.getNombrePsicologo(), citaSeleccionada.getFechaYHora()));
+                Notification.show("Cita cancelada con éxito.", 2000, Notification.Position.MIDDLE);
+                actualizarVista();
+            }
+        });
+
+        Button logoutButton = new Button("Cerrar Sesión", e -> {
+            usuarioActual = null;
+            Notification.show("Sesión cerrada.", 2000, Notification.Position.MIDDLE);
+            actualizarVista();
+        });
+
+        layoutEstudiante.setSpacing(true);
+        layoutEstudiante.setPadding(true);
+        layoutEstudiante.add(
+                new H3("Agendar Cita (selecciona un horario)"), gridHorarios,
+                new H3("Cancelar Cita (selecciona una de tus citas)"), gridMisCitas,
+                resumen,
+                logoutButton);
+    }
+}
